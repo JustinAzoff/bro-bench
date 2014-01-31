@@ -5,7 +5,21 @@ import time
 import os
 import csv
 import sys
+import shutil
 
+#python 2.6 compat
+def check_output(*popenargs, **kwargs):
+    if 'stdout' in kwargs:
+        raise ValueError('stdout argument not allowed, it will be overridden.')
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    output, unused_err = process.communicate()
+    retcode = process.poll()
+    if retcode:
+        cmd = kwargs.get("args")
+        if cmd is None:
+            cmd = popenargs[0]
+        raise subprocess.CalledProcessError(retcode, cmd, output=output)
+    return output
 
 def get_stats(cmd):
     args = ["perf", "stat", "-o", ".timing", "-x", " ", "-e", "instructions"] + cmd
@@ -17,7 +31,9 @@ def get_stats(cmd):
     elapsed = end - start
 
     with open(".timing") as f:
-        instructions = int(f.read().split()[0])
+        for line in f:
+            if 'instructions' in line:
+                instructions = int(line.split()[0])
 
     return {
         "elapsed": elapsed,
@@ -27,13 +43,20 @@ def get_stats(cmd):
 
 class Bencher:
     def __init__(self, data, srcdir, tmpdir, pcap):
-        self.data = data
-        self.srcdir = srcdir
-        self.tmpdir = tmpdir
-        self.pcap = pcap
         self.cwd = os.getcwd()
+        self.data = self.full(data)
+        self.srcdir = self.full(srcdir)
+        self.tmpdir = self.full(tmpdir)
+        self.pcap = self.full(pcap)
 
         self.benched_revisions = self.read_data()
+
+    def full(self, d):
+        if d.startswith("/"):
+            return d
+        else:
+            return os.path.join(self.cwd, d)
+            
 
     def read_data(self):
         revs = set()
@@ -51,6 +74,7 @@ class Bencher:
             w.writerow(data)
 
     def run_bro(self):
+        print "Testing..."
         os.chdir(self.tmpdir)
         cmd = ["bin/bro", "-r", self.pcap]
         return get_stats(cmd)
@@ -61,14 +85,18 @@ class Bencher:
 
     def build(self):
         os.chdir(self.srcdir)
-        subprocess.check_call(["./configure", "--prefix", self.tmpdir])
-        subprocess.check_call(["make -j8"])
-        subprocess.check_call(["make install"])
+        if os.path.exists(self.tmpdir):
+            shutil.rmtree(self.tmpdir)
+        print "Building..."
+        check_output(["./configure", "--prefix=" + self.tmpdir])
+        check_output(["make", "-j8"])
+        check_output(["make", "install"])
 
     def test(self, rev):
         self.checkout(rev)
         self.build()
         stats = self.run_bro()
+        return stats
 
     def get_git_info(self):
         os.chdir(self.srcdir)
@@ -91,7 +119,17 @@ class Bencher:
 
     def run(self):
         for rev, date in self.get_git_revisions():
-            self.test(rev)
+            if rev in self.benched_revisions: continue
+
+            print "Revision:", rev, date
+            self.checkout(rev)
+            self.build()
+            for x in range(3):
+                stats = self.run_bro()
+                print "%(elapsed).2f %(instructions)d" % stats
+                stats.update(dict(rev=rev, date=date))
+                self.log_data_point(stats)
+            return
 
 def main():
     parser = OptionParser()
