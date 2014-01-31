@@ -74,7 +74,6 @@ class Bencher:
             w.writerow(data)
 
     def run_bro(self):
-        print "Testing..."
         os.chdir(self.tmpdir)
         cmd = ["bin/bro", "-r", self.pcap]
         return get_stats(cmd)
@@ -88,7 +87,7 @@ class Bencher:
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
         print "Building..."
-        check_output(["./configure", "--prefix=" + self.tmpdir])
+        check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
         check_output(["make", "-j8"])
         check_output(["make", "install"])
 
