@@ -122,13 +122,18 @@ class Bencher:
 
             print "Revision:", rev, date
             self.checkout(rev)
-            self.build()
-            for x in range(3):
-                stats = self.run_bro()
+            try :
+                self.build()
+            except:
+                continue
+            for x in range(5):
+                try :
+                    stats = self.run_bro()
+                except:
+                    stats = dict(elapsed="", instructions="")
                 print "%(elapsed).2f %(instructions)d" % stats
                 stats.update(dict(rev=rev, date=date))
                 self.log_data_point(stats)
-            return
 
 def main():
     parser = OptionParser()
