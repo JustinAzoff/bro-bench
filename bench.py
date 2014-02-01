@@ -81,7 +81,11 @@ class Bencher:
     def checkout(self, rev):
         os.chdir(self.srcdir)
         subprocess.check_call(["git", "checkout", rev])
-        subprocess.check_call(["git", "submodule", "update"])
+        try :
+            check_output(["git", "submodule", "update"], stderr=subprocess.PIPE)
+        except:
+            #Nothing to do here?
+            pass
 
     def build(self):
         os.chdir(self.srcdir)
