@@ -81,6 +81,7 @@ class Bencher:
     def checkout(self, rev):
         os.chdir(self.srcdir)
         subprocess.check_call(["git", "checkout", rev])
+        subprocess.check_call(["git", "submodule", "update"])
 
     def build(self):
         os.chdir(self.srcdir)
