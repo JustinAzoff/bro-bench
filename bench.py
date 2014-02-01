@@ -139,7 +139,7 @@ class Bencher:
                 try :
                     stats = self.run_bro()
                 except:
-                    stats = dict(elapsed="", instructions="")
+                    stats = dict(elapsed=0, instructions=0)
                 self.log("result: %(elapsed).2f %(instructions)d" % stats)
                 stats.update(dict(rev=rev, date=date))
                 self.log_data_point(stats)
