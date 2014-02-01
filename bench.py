@@ -97,8 +97,7 @@ class Bencher:
             shutil.rmtree(self.tmpdir)
         self.log("Building...")
         check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
-        check_output(["make", "-j8"])
-        check_output(["make", "install"])
+        check_output(["make", "-j8", "install"])
 
     def test(self, rev):
         self.checkout(rev)
@@ -135,6 +134,7 @@ class Bencher:
                 self.build()
             except:
                 continue
+            self.log("Testing...")
             for x in range(5):
                 try :
                     stats = self.run_bro()
