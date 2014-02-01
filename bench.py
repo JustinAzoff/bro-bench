@@ -57,6 +57,9 @@ class Bencher:
         else:
             return os.path.join(self.cwd, d)
             
+    def log(self, s):
+        sys.stdout.write("%s\n" % s)
+        sys.stdout.flush()
 
     def read_data(self):
         revs = set()
@@ -92,7 +95,7 @@ class Bencher:
         os.chdir(self.srcdir)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
-        print "Building..."
+        self.log("Building...")
         check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
         check_output(["make", "-j8"])
         check_output(["make", "install"])
@@ -126,7 +129,7 @@ class Bencher:
         for rev, date in self.get_git_revisions():
             if rev in self.benched_revisions: continue
 
-            print "Revision:", rev, date
+            self.log("Revision: %s %s" %( rev, date))
             self.checkout(rev)
             try :
                 self.build()
@@ -137,7 +140,7 @@ class Bencher:
                     stats = self.run_bro()
                 except:
                     stats = dict(elapsed="", instructions="")
-                print "%(elapsed).2f %(instructions)d" % stats
+                self.log("result: %(elapsed).2f %(instructions)d" % stats)
                 stats.update(dict(rev=rev, date=date))
                 self.log_data_point(stats)
 
