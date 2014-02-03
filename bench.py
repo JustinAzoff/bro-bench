@@ -78,7 +78,7 @@ class Bencher:
 
     def run_bro(self):
         os.chdir(self.tmpdir)
-        bro_bin = os.path.join(self.tmpdir, "bin/bro")
+        bro_bin = os.path.join(self.tmpdir, "bin/bro", "-C")
         cmd = [bro_bin]
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap]
