@@ -42,12 +42,12 @@ def get_stats(cmd):
 
 
 class Bencher:
-    def __init__(self, data, srcdir, tmpdir, pcap):
+    def __init__(self, data, srcdir, tmpdir, pcaps):
         self.cwd = os.getcwd()
         self.data = self.full(data)
         self.srcdir = self.full(srcdir)
         self.tmpdir = self.full(tmpdir)
-        self.pcap = self.full(pcap)
+        self.pcaps = [self.full(pcap) for pcap in pcaps]
 
         self.benched_revisions = self.read_data()
 
@@ -79,7 +79,9 @@ class Bencher:
     def run_bro(self):
         os.chdir(self.tmpdir)
         bro_bin = os.path.join(self.tmpdir, "bin/bro")
-        cmd = [bro_bin, "-r", self.pcap]
+        cmd = [bro_bin]
+        for pcap in self.pcaps:
+            cmd.extend(["-r", pcap]
         return get_stats(cmd)
 
     def checkout(self, rev):
@@ -149,10 +151,10 @@ def main():
     parser.add_option("-d", "--data", dest="data", help="data file", action="store")
     parser.add_option("-s", "--src", dest="src", help="src dir", action="store")
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
-    parser.add_option("-p", "--pcap", dest="pcap", help="pcap", action="store")
+    parser.add_option("-p", "--pcap", dest="pcaps", help="pcap", action="append")
     (options, args) = parser.parse_args()
 
-    if not (options.data and options.src and options.tmp and options.pcap):
+    if not (options.data and options.src and options.tmp and options.pcaps):
         parser.print_help()
         sys.exit(1)
 
