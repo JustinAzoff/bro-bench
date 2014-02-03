@@ -92,10 +92,11 @@ class Bencher:
         ]
         for c in commands:
             try :
-                out = check_output(c.split())
-            except:
+                check_output(c.split())
+            except Exception, e:
                 #Nothing to do here?
                 self.log("error running " + c)
+                self.log(e.output)
 
     def build(self):
         os.chdir(self.srcdir)
