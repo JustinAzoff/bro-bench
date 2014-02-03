@@ -86,7 +86,7 @@ class Bencher:
         os.chdir(self.srcdir)
         subprocess.check_call(["git", "checkout", rev])
         commands = [
-            "git submodule update --recursive --init"
+            "git submodule update --recursive --init",
             "git reset --hard",
             "git submodule foreach --recursive git reset --hard",
         ]
@@ -165,8 +165,6 @@ def main():
 
     b = Bencher(options.data, options.src, options.tmp, options.pcap)
     b.run()
-
-    b.get_git_revisions()
 
 if __name__ == "__main__":
     main()
