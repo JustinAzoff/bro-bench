@@ -85,11 +85,17 @@ class Bencher:
     def checkout(self, rev):
         os.chdir(self.srcdir)
         subprocess.check_call(["git", "checkout", rev])
-        try :
-            check_output(["git", "submodule", "update"], stderr=subprocess.PIPE)
-        except:
-            #Nothing to do here?
-            pass
+        commands = [
+            "git submodule update --recursive --init"
+            "git reset --hard",
+            "git submodule foreach --recursive git reset --hard",
+        ]
+        for c in commands:
+            try :
+                check_output(c.split())
+            except:
+                #Nothing to do here?
+                pass
 
     def build(self):
         os.chdir(self.srcdir)
@@ -97,7 +103,8 @@ class Bencher:
             shutil.rmtree(self.tmpdir)
         self.log("Building...")
         check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
-        check_output(["make", "-j8", "install"])
+        check_output(["make", "clean"])
+        check_output(["make", "-j12", "install"])
 
     def test(self, rev):
         self.checkout(rev)
