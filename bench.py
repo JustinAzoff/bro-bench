@@ -94,21 +94,23 @@ class Bencher:
         ]
         for c in commands:
             try :
-                check_output(c.split())
+                subprocess.check_call(c.split())
             except Exception, e:
                 #Nothing to do here?
                 self.log("error running " + c)
-                self.log(e.output)
 
     def build(self):
         os.chdir(self.srcdir)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
         self.log("Building...")
+        s = time.time()
         subprocess.call(["make", "clean"], stdout=subprocess.PIPE)
         subprocess.call(["rm", "-rf", "build"])
         check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
         check_output(["make", "-j12", "install"])
+        e = time.time()
+        self.log("Build took %d seconds" % (e-s))
 
     def test(self, rev):
         self.checkout(rev)
