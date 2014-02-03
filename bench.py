@@ -158,7 +158,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    b = Bencher(options.data, options.src, options.tmp, options.pcap)
+    b = Bencher(options.data, options.src, options.tmp, options.pcaps)
     b.run()
 
 if __name__ == "__main__":
