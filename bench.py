@@ -73,7 +73,7 @@ class Bencher:
 
     def log_data_point(self, data):
         with open(self.data, 'a') as f:
-            w = csv.DictWriter(f, ["rev", "date", "elapsed", "instructions"])
+            w = csv.DictWriter(f, ["rev", "date", "subject", "elapsed", "instructions"])
             w.writerow(data)
 
     def run_bro(self):
@@ -92,18 +92,19 @@ class Bencher:
         ]
         for c in commands:
             try :
-                check_output(c.split())
+                out = check_output(c.split())
             except:
                 #Nothing to do here?
-                pass
+                self.log("error running " + c)
 
     def build(self):
         os.chdir(self.srcdir)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
         self.log("Building...")
+        subprocess.call(["make", "clean"], stdout=subprocess.PIPE)
+        subprocess.call(["rm", "-rf", "build"])
         check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
-        check_output(["make", "clean"])
         check_output(["make", "-j12", "install"])
 
     def test(self, rev):
@@ -112,27 +113,18 @@ class Bencher:
         stats = self.run_bro()
         return stats
 
-    def get_git_info(self):
-        os.chdir(self.srcdir)
-        ver = subprocess.check_output("git rev-parse HEAD".split()).strip()
-        out = subprocess.check_output(["git", "rev-list", "--format=format:%ci", "--max-count=1", ver])
-        date = out.splitlines()[-1]
-        return {
-            "version": ver,
-            "date": date,
-        }
-
     def get_git_revisions(self):
         os.chdir(self.srcdir)
-        cmd = ["git", "rev-list", "--format=format:%ci", "HEAD"]
+        cmd = ["git", "rev-list", "--format=format:%ci|%s", "HEAD"]
         out = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
         lines = iter(out.read().splitlines())
-        for rev, date in zip(lines, lines):
+        for rev, info in zip(lines, lines):
+            data, subject = info.split("|", 1)
             rev = rev.split()[1]
-            yield rev, date
+            yield rev, date, subject
 
     def run(self):
-        for rev, date in self.get_git_revisions():
+        for rev, date, subject in self.get_git_revisions():
             if rev in self.benched_revisions: continue
 
             self.log("Revision: %s %s" %( rev, date))
@@ -148,7 +140,7 @@ class Bencher:
                 except:
                     stats = dict(elapsed=0, instructions=0)
                 self.log("result: %(elapsed).2f %(instructions)d" % stats)
-                stats.update(dict(rev=rev, date=date))
+                stats.update(dict(rev=rev, date=date, subject=subject))
                 self.log_data_point(stats)
 
 def main():
