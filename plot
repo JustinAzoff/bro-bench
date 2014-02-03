@@ -23,17 +23,17 @@ set datafile separator ","
 #set timefmt "%Y-%m-%d %H:%M:%S -0800"
 #set format x "%m/%d"
 
-everytenth(col) = (int(column(col))%50 ==0)?substr(stringcolumn(2),6,10):""
+everytenth(col) = (int(column(col))%40 ==0)?substr(stringcolumn(2),6,10):""
 
 set multiplot layout 2, 1 ;
 
 set ylabel "seconds"
 set yrange [6:]
-plot "data.csv" using 0:4:xtic(everytenth(0)) with linespoints
+plot "data.csv" using 0:4:xtic(everytenth(0)) with linespoints title "Seconds"
 
 set ylabel "instructions"
 set yrange [30000000000.0:]
-plot "data.csv" using 0:5:xtic(everytenth(0)) with linespoints
+plot "data.csv" using 0:5:xtic(everytenth(0)) with linespoints title "Instructions"
 
 unset multiplot
 END
