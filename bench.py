@@ -119,7 +119,7 @@ class Bencher:
         out = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
         lines = iter(out.read().splitlines())
         for rev, info in zip(lines, lines):
-            data, subject = info.split("|", 1)
+            date, subject = info.split("|", 1)
             rev = rev.split()[1]
             yield rev, date, subject
 
