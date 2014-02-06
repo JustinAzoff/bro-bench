@@ -125,6 +125,7 @@ class Bencher:
         lines = iter(out.read().splitlines())
         for rev, info in zip(lines, lines):
             date, subject = info.split("|", 1)
+            subject = subject.replace(",",".")
             rev = rev.split()[1]
             yield rev, date, subject
 
