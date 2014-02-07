@@ -4,9 +4,9 @@ if [ $# -eq 0 ]; then
     C=$PWD/commits.txt
     (cd ~/src/bro; git rev-list --format=format:%ci HEAD|fgrep comm | cut -d " " -f 2 > $C)
 
-    ssh -t bromanager sudo ssh broworker cat /usr/local/bench/data.csv | \
+    ssh -t bromanager sudo ssh broworker cat /usr/local/bench/m57.csv | \
     ./commit_sort.py | \
-    fgrep -v ,0, > data.csv
+    fgrep -v ,0, > bro.csv
 fi
 
 
@@ -29,11 +29,11 @@ set multiplot layout 2, 1 ;
 
 set ylabel "seconds"
 set yrange [6:]
-plot "data.csv" using 0:4:xtic(everytenth(0)) with linespoints title "Seconds"
+plot "bro.csv" using 0:4:xtic(everytenth(0)) with linespoints title "Seconds"
 
 set ylabel "instructions"
-set yrange [30000000000.0:]
-plot "data.csv" using 0:5:xtic(everytenth(0)) with linespoints title "Instructions"
+set yrange [40000000000.0:]
+plot "bro.csv" using 0:5:xtic(everytenth(0)) with linespoints title "Instructions"
 
 unset multiplot
 END
