@@ -42,12 +42,13 @@ def get_stats(cmd):
 
 
 class Bencher:
-    def __init__(self, data, srcdir, tmpdir, pcaps):
+    def __init__(self, data, srcdir, tmpdir, pcaps, scripts):
         self.cwd = os.getcwd()
         self.data = self.full(data)
         self.srcdir = self.full(srcdir)
         self.tmpdir = self.full(tmpdir)
         self.pcaps = [self.full(pcap) for pcap in pcaps]
+        self.scripts = [self.full(script) for script in scripts]
 
         self.benched_revisions = self.read_data()
 
@@ -82,10 +83,16 @@ class Bencher:
         cmd = [bro_bin, "-C"]
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap])
+        cmd.extend(self.scripts)
         return get_stats(cmd)
 
     def checkout(self, rev):
         os.chdir(self.srcdir)
+        if os.path.exists("magic"):
+            shutil.rmtree("magic")
+        for f in 'src/3rdparty/sqlite3.c', 'src/3rdparty/sqlite3.h':
+            if os.path.exists(f):
+                os.unlink(f)
         subprocess.check_call(["git", "checkout", rev])
         commands = [
             "git submodule update --recursive --init",
@@ -108,6 +115,9 @@ class Bencher:
         subprocess.call(["make", "clean"], stdout=subprocess.PIPE)
         subprocess.call(["rm", "-rf", "build"])
         check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
+        #eh?
+        if os.path.exists("magic/README"):
+            os.unlink("magic/README")
         check_output(["make", "-j12", "install"])
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
@@ -155,13 +165,14 @@ def main():
     parser.add_option("-s", "--src", dest="src", help="src dir", action="store")
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
     parser.add_option("-p", "--pcap", dest="pcaps", help="pcap", action="append")
+    parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
     (options, args) = parser.parse_args()
 
     if not (options.data and options.src and options.tmp and options.pcaps):
         parser.print_help()
         sys.exit(1)
 
-    b = Bencher(options.data, options.src, options.tmp, options.pcaps)
+    b = Bencher(options.data, options.src, options.tmp, options.pcaps, options.scripts)
     b.run()
 
 if __name__ == "__main__":
