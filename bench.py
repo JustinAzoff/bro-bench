@@ -164,7 +164,7 @@ def main():
     parser.add_option("-d", "--data", dest="data", help="data file", action="store")
     parser.add_option("-s", "--src", dest="src", help="src dir", action="store")
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
-    parser.add_option("-p", "--pcap", dest="pcaps", help="pcap", action="append")
+    parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
     (options, args) = parser.parse_args()
 
