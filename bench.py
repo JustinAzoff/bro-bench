@@ -109,7 +109,7 @@ class Bencher:
 
     def fix_trivial_issues(self):
         ssl_fn = os.path.join(self.tmpdir, "share/bro/base/protocols/ssl/main.bro")
-        subprocess.call(["perl", "-pi", "-e", 's/timeout SSL::max_log_delay/timeout 15secs/', ssl_fn])
+        subprocess.call(["perl", "-pi", "-e", 's/timeout (SSL::)*max_log_delay/timeout 15secs/', ssl_fn])
 
     def build(self):
         os.chdir(self.srcdir)
