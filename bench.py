@@ -86,14 +86,15 @@ class Bencher:
         cmd.extend(self.scripts)
         return get_stats(cmd)
 
-    def checkout(self, rev):
+    def checkout(self, rev=None):
         os.chdir(self.srcdir)
         if os.path.exists("magic"):
             shutil.rmtree("magic")
         for f in 'src/3rdparty/sqlite3.c', 'src/3rdparty/sqlite3.h':
             if os.path.exists(f):
                 os.unlink(f)
-        subprocess.check_call(["git", "checkout", rev])
+        if rev:
+            subprocess.check_call(["git", "checkout", rev])
         commands = [
             "git submodule update --recursive --init",
             "git reset --hard",
@@ -121,12 +122,6 @@ class Bencher:
         check_output(["make", "-j12", "install"])
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
-
-    def test(self, rev):
-        self.checkout(rev)
-        self.build()
-        stats = self.run_bro()
-        return stats
 
     def get_git_revisions(self):
         os.chdir(self.srcdir)
@@ -159,6 +154,20 @@ class Bencher:
                 stats.update(dict(rev=rev, date=date, subject=subject))
                 self.log_data_point(stats)
 
+    def bisect(self, seconds_threshold):
+        self.checkout(None)
+        try :
+            self.build()
+            stats = self.run_bro()
+        except:
+            return 125
+
+        #success
+        if stats["elapsed"] < seconds_threshold:
+            return 0
+
+        return 1
+
 def main():
     parser = OptionParser()
     parser.add_option("-d", "--data", dest="data", help="data file", action="store")
@@ -166,6 +175,7 @@ def main():
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
     parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
+    parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds threshold", action="store", default=0)
     (options, args) = parser.parse_args()
 
     if not (options.data and options.src and options.tmp and options.pcaps):
@@ -173,7 +183,10 @@ def main():
         sys.exit(1)
 
     b = Bencher(options.data, options.src, options.tmp, options.pcaps, options.scripts)
-    b.run()
+    if options.bisect:
+        sys.exit(b.bisect(options.bisect))
+    else:
+        b.run()
 
 if __name__ == "__main__":
     main()
