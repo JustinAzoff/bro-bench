@@ -107,6 +107,10 @@ class Bencher:
                 self.log("error running " + c)
                 self.log(e.stderr)
 
+    def fix_trivial_issues(self):
+        ssl_fn = os.path.join(self.tmpdir, "share/bro/base/protocols/ssl/main.bro")
+        subprocess.call(["perl", "-pi", "-e", 's/timeout SSL::max_log_delay/timeout 15secs/', ssl_fn])
+
     def build(self):
         os.chdir(self.srcdir)
         if os.path.exists(self.tmpdir):
@@ -120,6 +124,7 @@ class Bencher:
         if os.path.exists("magic/README"):
             os.unlink("magic/README")
         get_output(["make", "-j12", "install"])
+        self.fix_trivial_issues()
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
 
