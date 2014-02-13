@@ -7,12 +7,21 @@ import csv
 import sys
 import shutil
 
+class ProcError(Exception):
+    def __init__(self, retcode, out, err):
+        self.code = retcode
+        self.stdout = out
+        self.stderr = err
+
+    def __str__(self):
+        return self.stderr
+
 def get_output(cmd):
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = process.communicate()
     retcode = process.poll()
     if retcode:
-        raise subprocess.CalledProcessError(retcode, cmd, output=output)
+        raise ProcError(retcode, output, err)
     return output, err
 
 def get_stats(cmd):
@@ -96,6 +105,7 @@ class Bencher:
             except Exception, e:
                 #Nothing to do here?
                 self.log("error running " + c)
+                self.log(e.stderr)
 
     def build(self):
         os.chdir(self.srcdir)
