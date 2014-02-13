@@ -7,19 +7,13 @@ import csv
 import sys
 import shutil
 
-#python 2.6 compat
-def check_output(*popenargs, **kwargs):
-    if 'stdout' in kwargs:
-        raise ValueError('stdout argument not allowed, it will be overridden.')
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, unused_err = process.communicate()
+def get_output(cmd):
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, err = process.communicate()
     retcode = process.poll()
     if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
         raise subprocess.CalledProcessError(retcode, cmd, output=output)
-    return output
+    return output, err
 
 def get_stats(cmd):
     args = ["perf", "stat", "-o", ".timing", "-x", " ", "-e", "instructions"] + cmd
@@ -98,7 +92,7 @@ class Bencher:
         ]
         for c in commands:
             try :
-                subprocess.check_call(c.split())
+                get_output(c.split())
             except Exception, e:
                 #Nothing to do here?
                 self.log("error running " + c)
@@ -111,11 +105,11 @@ class Bencher:
         s = time.time()
         subprocess.call(["make", "clean"], stdout=subprocess.PIPE)
         subprocess.call(["rm", "-rf", "build"])
-        check_output(["./configure", "--prefix=" + self.tmpdir], stderr=subprocess.PIPE)
+        get_output(["./configure", "--prefix=" + self.tmpdir])
         #eh?
         if os.path.exists("magic/README"):
             os.unlink("magic/README")
-        check_output(["make", "-j12", "install"])
+        get_output(["make", "-j12", "install"])
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
 
@@ -139,6 +133,7 @@ class Bencher:
             try :
                 self.build()
             except:
+                self.log("Build failed")
                 continue
             self.log("Testing...")
             for x in range(5):
