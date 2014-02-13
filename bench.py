@@ -88,11 +88,7 @@ class Bencher:
 
     def checkout(self, rev=None):
         os.chdir(self.srcdir)
-        if os.path.exists("magic"):
-            shutil.rmtree("magic")
-        for f in 'src/3rdparty/sqlite3.c', 'src/3rdparty/sqlite3.h':
-            if os.path.exists(f):
-                os.unlink(f)
+        self.cleanup()
         if rev:
             subprocess.check_call(["git", "checkout", rev])
         commands = [
@@ -154,12 +150,23 @@ class Bencher:
                 stats.update(dict(rev=rev, date=date, subject=subject))
                 self.log_data_point(stats)
 
+    def cleanup(self):
+        """Prevent merge conflicts"""
+        subprocess.call(["git", "clean", "-f"])
+        if os.path.exists("magic"):
+            shutil.rmtree("magic")
+        for f in 'src/3rdparty/sqlite3.c', 'src/3rdparty/sqlite3.h':
+            if os.path.exists(f):
+                os.unlink(f)
+
     def bisect(self, seconds_threshold):
         self.checkout(None)
         try :
             self.build()
+            self.cleanup()
             stats = self.run_bro()
         except:
+            self.cleanup() #FIXME: refactor this
             return 125
 
         #success
