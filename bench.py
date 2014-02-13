@@ -220,6 +220,7 @@ class Bencher:
             stats = self.bench_revision()
             seconds = stats["elapsed"]
             
+        self.cleanup()
         return self.bisect_result(seconds, seconds_threshold)
 
 def main():
