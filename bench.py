@@ -125,35 +125,49 @@ class Bencher:
 
     def get_git_revisions(self):
         os.chdir(self.srcdir)
-        cmd = ["git", "rev-list", "--format=format:%ci|%s", "HEAD"]
+        cmd = ["git", "rev-list", "HEAD"]
         out = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
-        lines = iter(out.read().splitlines())
-        for rev, info in zip(lines, lines):
-            date, subject = info.split("|", 1)
-            subject = subject.replace(",",".")
-            rev = rev.split()[1]
-            yield rev, date, subject
+        lines = out.read().splitlines()
+
+    def get_git_info(self):
+        os.chdir(self.srcdir)
+        rev = get_output("git rev-parse HEAD".split())[0].strip()
+        out = get_output(["git", "rev-list", "--format=format:%ci|%s", "--max-count=1", rev])[0]
+        date, subject = out.strip().splitlines()[-1].split("|")
+        return {
+            "rev": rev,
+            "date": date,
+            "subject": subject,
+        }
+
+    def bench_revision(self, rev=None):
+        if rev:
+            self.checkout(rev)
+        info = self.get_git_info()
+        self.log("Revision: %(rev)s %(date)s" % info)
+        try :
+            self.build()
+        except:
+            self.log("Build failed")
+            return
+        self.log("Testing...")
+        for x in range(5):
+            try :
+                stats = self.run_bro()
+            except:
+                stats = dict(elapsed=0, instructions=0)
+            self.log("result: %(elapsed).2f %(instructions)d" % stats)
+            stats.update(info)
+            self.log_data_point(stats)
+        return stats
+
 
     def run(self):
-        for rev, date, subject in self.get_git_revisions():
-            if rev in self.benched_revisions: continue
+        for rev in self.get_git_revisions():
+            if rev in self.benched_revisions:
+                return
 
-            self.log("Revision: %s %s" %( rev, date))
-            self.checkout(rev)
-            try :
-                self.build()
-            except:
-                self.log("Build failed")
-                continue
-            self.log("Testing...")
-            for x in range(5):
-                try :
-                    stats = self.run_bro()
-                except:
-                    stats = dict(elapsed=0, instructions=0)
-                self.log("result: %(elapsed).2f %(instructions)d" % stats)
-                stats.update(dict(rev=rev, date=date, subject=subject))
-                self.log_data_point(stats)
+            stats = self.bench_revision(rev)
 
     def cleanup(self):
         """Prevent merge conflicts"""
@@ -165,6 +179,19 @@ class Bencher:
             if os.path.exists(f):
                 os.unlink(f)
 
+    def bisect_result(self, seconds, seconds_threshold):
+        if seconds < 5:
+            self.log("BISECT: SKIP: seconds=%d" % (seconds))
+            return 125
+
+        #success
+        if seconds < seconds_threshold:
+            self.log("BISECT: OK: %d < %d" % (seconds, seconds_threshold))
+            return 0
+
+        self.log("BISECT: BAD: %d > %d" % (seconds, seconds_threshold))
+        return 1
+
     def bisect(self, seconds_threshold):
         self.checkout(None)
         try :
@@ -175,35 +202,25 @@ class Bencher:
             self.cleanup() #FIXME: refactor this
             self.log("BISECT: SKIPPING")
             return 125
-
-        #success
-        if stats["elapsed"] < seconds_threshold:
-            self.log("BISECT: OK: %d < %d" % (stats["elapsed"], seconds_threshold))
-            return 0
-
-        self.log("BISECT: BAD: %d > %d" % (stats["elapsed"], seconds_threshold))
-        return 1
+        return self.bisect_result(stats["elapsed"], seconds_threshold)
 
 
     def get_seconds_from_data(self):
-        ver = get_output("git rev-parse HEAD".split())[0].strip()
+        os.chdir(self.srcdir)
+        rev = get_output("git rev-parse HEAD".split())[0].strip()
         for rec in csv.reader(open(self.data)):
-            if rec[0] == ver:
+            if rec[0] == rev:
                 return float(rec[3])
 
     def fast_bisect(self, seconds_threshold):
         seconds = self.get_seconds_from_data()
-        if not seconds:
-            self.log("BISECT: SKIPPING")
-            return 125
-
-        if seconds < seconds_threshold:
-            self.log("BISECT: OK: %d < %d" % (seconds, seconds_threshold))
-            return 0
-
-        self.log("BISECT: BAD: %d > %d" % (seconds, seconds_threshold))
-        return 1
-                
+        if seconds is None:
+            self.log("Need to build this revision..")
+            self.checkout()
+            stats = self.bench_revision()
+            seconds = stats["elapsed"]
+            
+        return self.bisect_result(seconds, seconds_threshold)
 
 def main():
     parser = OptionParser()
