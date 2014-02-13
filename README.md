@@ -3,8 +3,6 @@ Work in progress benchmark tool.
 Usage
 =====
 
-    Usage: bench.py [options]
-
     Options:
       -h, --help            show this help message and exit
       -d DATA, --data=DATA  data file
@@ -14,6 +12,9 @@ Usage
                             pcaps
       -l SCRIPTS, --load=SCRIPTS
                             scripts
+      -b BISECT, --bisect=BISECT
+                            bisect mode, set to seconds threshold
+      -f, --fastbisect      uses data file for bisecting
 
 
 Example usage
@@ -26,6 +27,14 @@ Example usage
         -p traces/net-2009-12-09-11:59.pcap \
         -l bench.bro \
         -d m57_local.csv
+
+Bisect mode
+===========
+
+Ran with --bisect it can be used with git-bisect run.  The -f option (fast
+bisect) will use timing information saved in the data file to avoid testing the
+same revisions.
+
 
 Tips
 ====
