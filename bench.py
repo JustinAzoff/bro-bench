@@ -113,7 +113,7 @@ class Bencher:
             shutil.rmtree(self.tmpdir)
         self.log("Building...")
         s = time.time()
-        subprocess.call(["make", "clean"], stdout=subprocess.PIPE)
+        get_output(["make", "clean"])
         subprocess.call(["rm", "-rf", "build"])
         get_output(["./configure", "--prefix=" + self.tmpdir])
         #eh?
