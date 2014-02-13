@@ -178,10 +178,10 @@ class Bencher:
 
         #success
         if stats["elapsed"] < seconds_threshold:
-            self.log("BISECT: OK")
+            self.log("BISECT: OK: %d < %d" % (stats["elapsed"], seconds_threshold))
             return 0
 
-        self.log("BISECT: BAD")
+        self.log("BISECT: BAD: %d > %d" % (stats["elapsed"], seconds_threshold))
         return 1
 
 
@@ -198,10 +198,10 @@ class Bencher:
             return 125
 
         if seconds < seconds_threshold:
-            self.log("BISECT: OK")
+            self.log("BISECT: OK: %d < %d" % (seconds, seconds_threshold))
             return 0
 
-        self.log("BISECT: BAD")
+        self.log("BISECT: BAD: %d > %d" % (seconds, seconds_threshold))
         return 1
                 
 
@@ -212,7 +212,7 @@ def main():
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
     parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
-    parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds threshold", action="store", default=0)
+    parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds threshold", action="store", type="int", default=0)
     parser.add_option("-f", "--fastbisect", dest="fastbisect", help="uses data file for bisecting", action="store_true", default=False)
     (options, args) = parser.parse_args()
 
