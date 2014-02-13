@@ -168,12 +168,15 @@ class Bencher:
             stats = self.run_bro()
         except:
             self.cleanup() #FIXME: refactor this
+            self.log("BISECT: SKIPPING")
             return 125
 
         #success
         if stats["elapsed"] < seconds_threshold:
+            self.log("BISECT: OK")
             return 0
 
+        self.log("BISECT: BAD")
         return 1
 
 def main():
