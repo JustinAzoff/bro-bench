@@ -147,9 +147,10 @@ class Bencher:
         self.log("Revision: %(rev)s %(date)s" % info)
         try :
             self.build()
-        except:
+        except ProcError, e:
             self.log("Build failed")
-            return
+            self.log(e.stderr)
+            return None
         self.log("Testing...")
         for x in range(5):
             try :
@@ -195,14 +196,13 @@ class Bencher:
     def bisect(self, seconds_threshold):
         self.checkout(None)
         try :
-            self.build()
+            seconds = self.bench_revision()["elapsed"]
             self.cleanup()
-            stats = self.run_bro()
         except:
             self.cleanup() #FIXME: refactor this
             self.log("BISECT: SKIPPING")
             return 125
-        return self.bisect_result(stats["elapsed"], seconds_threshold)
+        return self.bisect_result(seconds, seconds_threshold)
 
 
     def get_seconds_from_data(self):
