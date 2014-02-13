@@ -184,6 +184,27 @@ class Bencher:
         self.log("BISECT: BAD")
         return 1
 
+
+    def get_seconds_from_data(self):
+        ver = get_output("git rev-parse HEAD".split())[0].strip()
+        for rec in csv.reader(open(self.data)):
+            if rec[0] == ver:
+                return float(rec[3])
+
+    def fast_bisect(self, seconds_threshold):
+        seconds = self.get_seconds_from_data()
+        if not seconds:
+            self.log("BISECT: SKIPPING")
+            return 125
+
+        if seconds < seconds_threshold:
+            self.log("BISECT: OK")
+            return 0
+
+        self.log("BISECT: BAD")
+        return 1
+                
+
 def main():
     parser = OptionParser()
     parser.add_option("-d", "--data", dest="data", help="data file", action="store")
@@ -192,6 +213,7 @@ def main():
     parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
     parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds threshold", action="store", default=0)
+    parser.add_option("-f", "--fastbisect", dest="fastbisect", help="uses data file for bisecting", action="store_true", default=False)
     (options, args) = parser.parse_args()
 
     if not (options.data and options.src and options.tmp and options.pcaps):
@@ -199,10 +221,13 @@ def main():
         sys.exit(1)
 
     b = Bencher(options.data, options.src, options.tmp, options.pcaps, options.scripts)
+    if options.fastbisect and options.bisect:
+        sys.exit(b.fast_bisect(options.bisect))
+
     if options.bisect:
         sys.exit(b.bisect(options.bisect))
-    else:
-        b.run()
+
+    b.run()
 
 if __name__ == "__main__":
     main()
