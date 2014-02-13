@@ -214,14 +214,11 @@ class Bencher:
 
     def fast_bisect(self, seconds_threshold):
         seconds = self.get_seconds_from_data()
-        if seconds is None:
-            self.log("Need to build this revision..")
-            self.checkout()
-            stats = self.bench_revision()
-            seconds = stats["elapsed"]
-            
-        self.cleanup()
-        return self.bisect_result(seconds, seconds_threshold)
+        if seconds:
+            return self.bisect_result(seconds, seconds_threshold)
+
+        self.log("Need to build this revision..")
+        return self.bisect(seconds_threshold)
 
 def main():
     parser = OptionParser()
