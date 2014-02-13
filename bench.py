@@ -152,6 +152,7 @@ class Bencher:
 
     def cleanup(self):
         """Prevent merge conflicts"""
+        os.chdir(self.srcdir)
         subprocess.call(["git", "clean", "-f"])
         if os.path.exists("magic"):
             shutil.rmtree("magic")
