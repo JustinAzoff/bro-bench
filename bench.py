@@ -172,7 +172,7 @@ class Bencher:
     def run(self):
         for rev in self.get_git_revisions():
             if rev in self.benched_revisions:
-                return
+                continue
 
             stats = self.bench_revision(rev)
 
