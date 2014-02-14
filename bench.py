@@ -7,6 +7,8 @@ import csv
 import sys
 import shutil
 
+BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
+
 class ProcError(Exception):
     def __init__(self, retcode, out, err):
         self.code = retcode
@@ -54,6 +56,7 @@ class Bencher:
         self.scripts = [self.full(script) for script in scripts]
 
         self.benched_revisions = self.read_data()
+        self.benched_revisions.update(BAD_COMMITS)
 
     def full(self, d):
         if d.startswith("/"):
