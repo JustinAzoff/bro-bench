@@ -147,8 +147,7 @@ class Bencher:
         }
 
     def bench_revision(self, rev=None):
-        if rev:
-            self.checkout(rev)
+        self.checkout(rev)
         info = self.get_git_info()
         self.log("Revision: %(rev)s %(date)s" % info)
         try :
