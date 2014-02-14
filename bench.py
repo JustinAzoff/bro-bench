@@ -114,7 +114,7 @@ class Bencher:
         subprocess.call(["perl", "-pi", "-e", 's/timeout (SSL::)*max_log_delay/timeout 15secs/', ssl_fn])
 
         local_fn = os.path.join(self.tmpdir, "share/bro/site/local.bro")
-        subprocess.call(["perl", "-pi", "-e", 's!@load protocols/ssl/notary!#nope!', local_fn])
+        subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
 
     def build(self):
         os.chdir(self.srcdir)
