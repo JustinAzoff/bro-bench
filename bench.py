@@ -98,6 +98,8 @@ class Bencher:
             "git submodule update --recursive --init",
             "git reset --hard",
             "git submodule foreach --recursive git reset --hard",
+            "git checkout .",
+            "git submodule foreach --recursive git checkout .",
         ]
         for c in commands:
             try :
