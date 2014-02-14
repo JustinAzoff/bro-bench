@@ -119,6 +119,10 @@ class Bencher:
         local_fn = os.path.join(self.tmpdir, "share/bro/site/local.bro")
         subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
 
+        mhr_fn = os.path.join(self.tmpdir, "share/bro/policy/protocols/http/detect-MHR.bro")
+        if os.path.exists(mhr_fn):
+            subprocess.call(["perl", "-pi", "-e", 's/if/return;if/', mhr_fn])
+
     def build(self):
         os.chdir(self.srcdir)
         if os.path.exists(self.tmpdir):
