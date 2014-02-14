@@ -132,7 +132,8 @@ class Bencher:
         os.chdir(self.srcdir)
         cmd = ["git", "rev-list", "HEAD"]
         out = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
-        lines = out.read().splitlines()
+        revs = [r.strip() for r in out.read().splitlines()]
+        return revs
 
     def get_git_info(self):
         os.chdir(self.srcdir)
