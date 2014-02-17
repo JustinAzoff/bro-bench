@@ -8,6 +8,7 @@ import sys
 import shutil
 
 BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
+FIELDS = ["rev", "date", "subject", "elapsed", "instructions"]
 
 class ProcError(Exception):
     def __init__(self, retcode, out, err):
@@ -73,14 +74,14 @@ class Bencher:
         if not os.path.exists(self.data):
             return revs
         with open(self.data) as f:
-            for rec in csv.reader(f):
-                rev = rec[0]
+            for rec in csv.DictReader(f, FIELDS):
+                rev = rec['rev']
                 revs.add(rev)
         return revs
 
     def log_data_point(self, data):
         with open(self.data, 'a') as f:
-            w = csv.DictWriter(f, ["rev", "date", "subject", "elapsed", "instructions"])
+            w = csv.DictWriter(f, FIELDS)
             w.writerow(data)
 
     def run_bro(self):
@@ -197,45 +198,48 @@ class Bencher:
             if os.path.exists(f):
                 os.unlink(f)
 
-    def bisect_result(self, seconds, seconds_threshold):
-        if seconds < 5:
-            self.log("BISECT: SKIP: seconds=%d" % (seconds))
+    def bisect_result(self, value, value_threshold):
+        if value < 5:
+            self.log("BISECT: SKIP: value=%d" % (value))
             return 125
 
         #success
-        if seconds < seconds_threshold:
-            self.log("BISECT: OK: %d < %d" % (seconds, seconds_threshold))
+        if value < value_threshold:
+            self.log("BISECT: OK: %d < %d" % (value, value_threshold))
             return 0
 
-        self.log("BISECT: BAD: %d > %d" % (seconds, seconds_threshold))
+        self.log("BISECT: BAD: %d > %d" % (value, value_threshold))
         return 1
 
-    def bisect(self, seconds_threshold):
+    def bisect(self, value_threshold):
+        key = value_threshold < 10000 and "elapsed" or "instructions"
+
         self.checkout(None)
         try :
-            seconds = self.bench_revision()["elapsed"]
+            value = self.bench_revision()[key]
             self.cleanup()
         except:
             self.cleanup() #FIXME: refactor this
             self.log("BISECT: SKIPPING")
             return 125
-        return self.bisect_result(seconds, seconds_threshold)
+        return self.bisect_result(value, value_threshold)
 
 
-    def get_seconds_from_data(self):
+    def get_value_from_data(self, key):
         os.chdir(self.srcdir)
         rev = get_output("git rev-parse HEAD".split())[0].strip()
-        for rec in csv.reader(open(self.data)):
-            if rec[0] == rev:
-                return float(rec[3])
+        for rec in csv.DictReader(open(self.data), FIELDS):
+            if rec['rev'] == rev:
+                return float(rec[key])
 
-    def fast_bisect(self, seconds_threshold):
-        seconds = self.get_seconds_from_data()
-        if seconds:
-            return self.bisect_result(seconds, seconds_threshold)
+    def fast_bisect(self, value_threshold):
+        key = value_threshold < 10000 and "elapsed" or "instructions"
+        value = self.get_value_from_data(key)
+        if value:
+            return self.bisect_result(value, value_threshold)
 
         self.log("Need to build this revision..")
-        return self.bisect(seconds_threshold)
+        return self.bisect(value_threshold)
 
 def main():
     parser = OptionParser()
@@ -244,7 +248,7 @@ def main():
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
     parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
-    parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds threshold", action="store", type="int", default=0)
+    parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds or instructions threshold", action="store", type="int", default=0)
     parser.add_option("-f", "--fastbisect", dest="fastbisect", help="uses data file for bisecting", action="store_true", default=False)
     (options, args) = parser.parse_args()
 
