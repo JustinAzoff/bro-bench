@@ -6,4 +6,4 @@ if [ $# -eq 0 ]; then
 fi
 
 C=$PWD/commits.txt
-cd $1 && git rev-list --format=format:%ci HEAD|grep ^comm | cut -d " " -f 2 > $C
+cd $1 && git rev-list --format=format:%ci master|grep ^comm | cut -d " " -f 2 > $C

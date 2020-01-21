@@ -10,6 +10,10 @@ import shutil
 BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
 FIELDS = ["rev", "date", "subject", "elapsed", "instructions"]
 
+os.environ['PATH']='/usr/lib/ccache/:' + os.environ['PATH']
+os.environ['CCACHE_DIR'] = '/tmp/ccache'
+#echo max_size = 15.0G  >> /tmp/ccache/ccache.conf
+
 class ProcError(Exception):
     def __init__(self, retcode, out, err):
         self.code = retcode
@@ -59,6 +63,9 @@ class Bencher:
         self.benched_revisions = self.read_data()
         self.benched_revisions.update(BAD_COMMITS)
 
+        self.is_zeek =  os.path.exists(os.path.join(self.srcdir, 'zeek-config.in'))
+        self.ext = "zeek" if self.is_zeek else "bro"
+
     def full(self, d):
         if d.startswith("/"):
             return d
@@ -86,7 +93,7 @@ class Bencher:
 
     def run_bro(self):
         os.chdir(self.tmpdir)
-        bro_bin = os.path.join(self.tmpdir, "bin/bro")
+        bro_bin = os.path.join(self.tmpdir, "bin/zeek" if self.is_zeek else "bin/bro")
         cmd = [bro_bin, "-C"]
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap])
@@ -114,13 +121,13 @@ class Bencher:
                 self.log(e.stderr)
 
     def fix_trivial_issues(self):
-        ssl_fn = os.path.join(self.tmpdir, "share/bro/base/protocols/ssl/main.bro")
+        ssl_fn = os.path.join(self.tmpdir, "share/{0}/base/protocols/ssl/main.{0}".format(self.ext))
         subprocess.call(["perl", "-pi", "-e", 's/timeout (SSL::)*max_log_delay/timeout 15secs/', ssl_fn])
 
-        local_fn = os.path.join(self.tmpdir, "share/bro/site/local.bro")
+        local_fn = os.path.join(self.tmpdir, "share/{0}/site/local.{0}".format(self.ext))
         subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
 
-        mhr_fn = os.path.join(self.tmpdir, "share/bro/policy/protocols/http/detect-MHR.bro")
+        mhr_fn = os.path.join(self.tmpdir, "share/{0}/policy/protocols/http/detect-MHR.{0}".format(self.ext))
         if os.path.exists(mhr_fn):
             subprocess.call(["perl", "-pi", "-e", 's/if/return;if/', mhr_fn])
 
@@ -129,14 +136,19 @@ class Bencher:
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
         self.log("Building...")
+        self.is_zeek =  os.path.exists('zeek-config.in')
+        self.ext = "zeek" if self.is_zeek else "bro"
+
         s = time.time()
-        get_output(["make", "clean"])
+        #get_output(["make", "clean"])
         subprocess.call(["rm", "-rf", "build"])
-        get_output(["./configure", "--prefix=" + self.tmpdir])
+        configure_cmd = ["./configure", "--prefix=" + self.tmpdir, '--disable-python']
+        configure_cmd.append("--disable-zeekctl" if self.is_zeek else  "--disable-broctl")
+        get_output(configure_cmd)
         #eh?
         if os.path.exists("magic/README"):
             os.unlink("magic/README")
-        get_output(["make", "-j12", "install"])
+        get_output(["make", "-j20", "install"])
         self.fix_trivial_issues()
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
@@ -182,7 +194,10 @@ class Bencher:
 
 
     def run(self):
+        x=0
         for rev in self.get_git_revisions():
+            x += 1
+            if x%20: continue
             if rev in self.benched_revisions:
                 continue
 

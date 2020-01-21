@@ -20,7 +20,7 @@ set yrange [6:]
 plot "$F" using 2:4 with points title "Seconds"
 
 set ylabel "instructions"
-set yrange [30000000000.0:]
+set yrange [24000000000.0:]
 plot "$F" using 2:5 with points title "Instructions"
 
 unset multiplot
