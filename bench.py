@@ -52,11 +52,12 @@ def get_stats(cmd):
 
 
 class Bencher:
-    def __init__(self, data, srcdir, tmpdir, pcaps, scripts):
+    def __init__(self, data, srcdir, tmpdir, instdir, pcaps, scripts):
         self.cwd = os.getcwd()
         self.data = self.full(data)
         self.srcdir = self.full(srcdir)
         self.tmpdir = self.full(tmpdir)
+        self.instdir = self.full(instdir)
         self.pcaps = [self.full(pcap) for pcap in pcaps]
         self.scripts = [self.full(script) for script in scripts]
 
@@ -91,9 +92,10 @@ class Bencher:
             w = csv.DictWriter(f, FIELDS)
             w.writerow(data)
 
-    def run_bro(self):
+    def run_bro(self, rev):
+        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
         os.chdir(self.tmpdir)
-        bro_bin = os.path.join(self.tmpdir, "bin/zeek" if self.is_zeek else "bin/bro")
+        bro_bin = os.path.join(dst_dir, "bin/zeek" if self.is_zeek else "bin/bro")
         cmd = [bro_bin, "-C"]
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap])
@@ -120,36 +122,38 @@ class Bencher:
                 self.log("error running " + c)
                 self.log(e.stderr)
 
-    def fix_trivial_issues(self):
-        ssl_fn = os.path.join(self.tmpdir, "share/{0}/base/protocols/ssl/main.{0}".format(self.ext))
+    def fix_trivial_issues(self, dst_dir):
+        ssl_fn = os.path.join(dst_dir, "share/{0}/base/protocols/ssl/main.{0}".format(self.ext))
         subprocess.call(["perl", "-pi", "-e", 's/timeout (SSL::)*max_log_delay/timeout 15secs/', ssl_fn])
 
-        local_fn = os.path.join(self.tmpdir, "share/{0}/site/local.{0}".format(self.ext))
+        local_fn = os.path.join(dst_dir, "share/{0}/site/local.{0}".format(self.ext))
         subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
 
-        mhr_fn = os.path.join(self.tmpdir, "share/{0}/policy/protocols/http/detect-MHR.{0}".format(self.ext))
+        mhr_fn = os.path.join(dst_dir, "share/{0}/policy/protocols/http/detect-MHR.{0}".format(self.ext))
         if os.path.exists(mhr_fn):
             subprocess.call(["perl", "-pi", "-e", 's/if/return;if/', mhr_fn])
 
-    def build(self):
+    def build(self, rev):
+        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
+        if os.path.exists(dst_dir + "/bin/bro"):
+            self.log("Already built: {}".format(rev))
+            return
         os.chdir(self.srcdir)
-        if os.path.exists(self.tmpdir):
-            shutil.rmtree(self.tmpdir)
-        self.log("Building...")
+        self.log("Building {}".format(rev))
         self.is_zeek =  os.path.exists('zeek-config.in')
         self.ext = "zeek" if self.is_zeek else "bro"
 
         s = time.time()
         #get_output(["make", "clean"])
         subprocess.call(["rm", "-rf", "build"])
-        configure_cmd = ["./configure", "--prefix=" + self.tmpdir, '--disable-python']
+        configure_cmd = ["./configure", "--prefix=" + dst_dir, '--disable-python', "--build-type=Release"]
         configure_cmd.append("--disable-zeekctl" if self.is_zeek else  "--disable-broctl")
         get_output(configure_cmd)
         #eh?
         if os.path.exists("magic/README"):
             os.unlink("magic/README")
         get_output(["make", "-j20", "install"])
-        self.fix_trivial_issues()
+        self.fix_trivial_issues(dst_dir)
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
 
@@ -176,7 +180,7 @@ class Bencher:
         info = self.get_git_info()
         self.log("Revision: %(rev)s %(date)s" % info)
         try :
-            self.build()
+            self.build(rev)
         except ProcError, e:
             self.log("Build failed")
             self.log(e.stderr)
@@ -184,7 +188,7 @@ class Bencher:
         self.log("Testing...")
         for x in range(5):
             try :
-                stats = self.run_bro()
+                stats = self.run_bro(rev)
             except:
                 stats = dict(elapsed=0, instructions=0)
             self.log("result: %(elapsed).2f %(instructions)d" % stats)
@@ -260,6 +264,7 @@ def main():
     parser = OptionParser()
     parser.add_option("-d", "--data", dest="data", help="data file", action="store")
     parser.add_option("-s", "--src", dest="src", help="src dir", action="store")
+    parser.add_option("-i", "--inst", dest="inst", help="install dir", action="store", default="/usr/local/zeeks")
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
     parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
@@ -271,7 +276,7 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    b = Bencher(options.data, options.src, options.tmp, options.pcaps, options.scripts)
+    b = Bencher(options.data, options.src, options.tmp, options.inst, options.pcaps, options.scripts)
     if options.fastbisect and options.bisect:
         sys.exit(b.fast_bisect(options.bisect))
 
