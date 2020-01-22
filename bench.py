@@ -6,6 +6,7 @@ import os
 import csv
 import sys
 import shutil
+import glob
 
 BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
 FIELDS = ["rev", "date", "subject", "elapsed", "instructions"]
@@ -126,9 +127,10 @@ class Bencher:
         ssl_fn = os.path.join(dst_dir, "share/{0}/base/protocols/ssl/main.{0}".format(self.ext))
         subprocess.call(["perl", "-pi", "-e", 's/timeout (SSL::)*max_log_delay/timeout 15secs/', ssl_fn])
 
-        local_fn = os.path.join(dst_dir, "share/{0}/site/local.{0}".format(self.ext))
-        subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
-        subprocess.call(["perl", "-pi", "-e", 's!.load.*detect.MHR!#nope!', local_fn])
+        local_fn_glob = os.path.join(dst_dir, "share/*/site/local.*")
+        for local_fn in glob.glob(local_fn_glob):
+            subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
+            subprocess.call(["perl", "-pi", "-e", 's!.load.*detect.MHR!#nope!', local_fn])
 
         #mhr_fn = os.path.join(dst_dir, "share/{0}/policy/protocols/http/detect-MHR.{0}".format(self.ext))
         #if os.path.exists(mhr_fn):
