@@ -170,7 +170,7 @@ class Bencher:
 
     def get_git_info(self, rev="HEAD"):
         os.chdir(self.srcdir)
-        if rev=="HEAD":
+        if rev == "HEAD":
             rev = get_output("git rev-parse HEAD".split())[0].strip()
         out = get_output(["git", "rev-list", "--format=format:%ci|%s", "--max-count=1", rev])[0]
         date, subject = out.strip().splitlines()[-1].split("|")
@@ -180,8 +180,9 @@ class Bencher:
             "subject": subject,
         }
 
-    def bench_revision(self, rev=None):
+    def bench_revision(self, rev="HEAD"):
         info = self.get_git_info(rev)
+        rev = info['rev']
         self.log("Revision: %(rev)s %(date)s" % info)
         try :
             self.build(rev)
@@ -241,7 +242,8 @@ class Bencher:
         try :
             value = self.bench_revision()[key]
             self.cleanup()
-        except:
+        except Exception, e:
+            self.log("Exception {}".format(e))
             self.cleanup() #FIXME: refactor this
             self.log("BISECT: SKIPPING")
             return 125
