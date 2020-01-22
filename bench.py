@@ -128,10 +128,11 @@ class Bencher:
 
         local_fn = os.path.join(dst_dir, "share/{0}/site/local.{0}".format(self.ext))
         subprocess.call(["perl", "-pi", "-e", 's!.load protocols/ssl/notary!#nope!', local_fn])
+        subprocess.call(["perl", "-pi", "-e", 's!.load.*detect.MHR!#nope!', local_fn])
 
-        mhr_fn = os.path.join(dst_dir, "share/{0}/policy/protocols/http/detect-MHR.{0}".format(self.ext))
-        if os.path.exists(mhr_fn):
-            subprocess.call(["perl", "-pi", "-e", 's/if/return;if/', mhr_fn])
+        #mhr_fn = os.path.join(dst_dir, "share/{0}/policy/protocols/http/detect-MHR.{0}".format(self.ext))
+        #if os.path.exists(mhr_fn):
+        #    subprocess.call(["perl", "-pi", "-e", 's/if/return;if/', mhr_fn])
 
     def build(self, rev):
         dst_dir = "{}/zeek-{}".format(self.instdir, rev)
