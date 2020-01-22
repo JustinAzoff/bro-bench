@@ -141,6 +141,7 @@ class Bencher:
             return
         os.chdir(self.srcdir)
         self.log("Building {}".format(rev))
+        self.checkout(rev)
         self.is_zeek =  os.path.exists('zeek-config.in')
         self.ext = "zeek" if self.is_zeek else "bro"
 
@@ -165,9 +166,10 @@ class Bencher:
         revs = [r.strip() for r in out.read().splitlines()]
         return revs
 
-    def get_git_info(self):
+    def get_git_info(self, rev="HEAD"):
         os.chdir(self.srcdir)
-        rev = get_output("git rev-parse HEAD".split())[0].strip()
+        if rev=="HEAD":
+            rev = get_output("git rev-parse HEAD".split())[0].strip()
         out = get_output(["git", "rev-list", "--format=format:%ci|%s", "--max-count=1", rev])[0]
         date, subject = out.strip().splitlines()[-1].split("|")
         return {
@@ -177,8 +179,7 @@ class Bencher:
         }
 
     def bench_revision(self, rev=None):
-        self.checkout(rev)
-        info = self.get_git_info()
+        info = self.get_git_info(rev)
         self.log("Revision: %(rev)s %(date)s" % info)
         try :
             self.build(rev)
