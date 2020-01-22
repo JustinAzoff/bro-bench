@@ -106,7 +106,7 @@ class Bencher:
         os.chdir(self.srcdir)
         self.cleanup()
         if rev:
-            subprocess.check_call(["git", "checkout", rev])
+            subprocess.check_call(["git", "checkout", "-f", rev])
         commands = [
             "git submodule update --recursive --init",
             "git reset --hard",
