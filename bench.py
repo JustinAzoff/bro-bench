@@ -270,13 +270,13 @@ def main():
     parser.add_option("-s", "--src", dest="src", help="src dir", action="store")
     parser.add_option("-i", "--inst", dest="inst", help="install dir", action="store", default="/usr/local/zeeks")
     parser.add_option("-t", "--tmp", dest="tmp", help="tmp dir", action="store")
-    parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append")
+    parser.add_option("-p", "--pcap", dest="pcaps", help="pcaps", action="append", default=[])
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
     parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds or instructions threshold", action="store", type="int", default=0)
     parser.add_option("-f", "--fastbisect", dest="fastbisect", help="uses data file for bisecting", action="store_true", default=False)
     (options, args) = parser.parse_args()
 
-    if not (options.data and options.src and options.tmp and options.pcaps):
+    if not (options.data and options.src and options.tmp and (options.pcaps or options.scripts)):
         parser.print_help()
         sys.exit(1)
 
