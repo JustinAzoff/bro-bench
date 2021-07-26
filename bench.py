@@ -191,7 +191,8 @@ class Bencher:
             self.log(e.stderr)
             return None
         self.log("Testing...")
-        for x in range(5):
+        #FIXME: make this an option
+        for x in range(1):
             try :
                 stats = self.run_bro(rev)
             except:
