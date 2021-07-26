@@ -7,13 +7,14 @@ Usage
       -h, --help            show this help message and exit
       -d DATA, --data=DATA  data file
       -s SRC, --src=SRC     src dir
+      -i INST, --inst=INST  install dir
       -t TMP, --tmp=TMP     tmp dir
       -p PCAPS, --pcap=PCAPS
                             pcaps
       -l SCRIPTS, --load=SCRIPTS
                             scripts
       -b BISECT, --bisect=BISECT
-                            bisect mode, set to seconds threshold
+                            bisect mode, set to seconds or instructions threshold
       -f, --fastbisect      uses data file for bisecting
 
 
