@@ -9,7 +9,7 @@ import shutil
 import glob
 
 BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
-FIELDS = ["rev", "date", "subject", "elapsed", "instructions"]
+FIELDS = ["rev", "date", "subject", "version", "elapsed", "instructions"]
 
 os.environ['PATH']='/usr/lib/ccache/:' + os.environ['PATH']
 os.environ['CCACHE_DIR'] = '/tmp/ccache'
@@ -92,6 +92,11 @@ class Bencher:
         with open(self.data, 'a') as f:
             w = csv.DictWriter(f, FIELDS)
             w.writerow(data)
+
+    def get_version(self, rev):
+        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
+        bro_bin = os.path.join(dst_dir, "bin/zeek" if self.is_zeek else "bin/bro")
+        return get_output([bro_bin, "--version"]).strip()
 
     def run_bro(self, rev):
         dst_dir = "{}/zeek-{}".format(self.instdir, rev)
@@ -190,6 +195,7 @@ class Bencher:
             self.log("Build failed")
             self.log(e.stderr)
             return None
+        info["version"] = self.get_version(rev)
         self.log("Testing...")
         #FIXME: make this an option
         for x in range(1):
