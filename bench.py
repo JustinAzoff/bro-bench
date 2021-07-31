@@ -164,8 +164,8 @@ class Bencher:
     def get_git_revisions(self):
         os.chdir(self.srcdir)
         cmd = ["git", "rev-list", "HEAD"]
-        out = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
-        revs = [r.strip() for r in out.read().splitlines()]
+        out, err = get_output(cmd)
+        revs = [r.strip() for r in out.splitlines()]
         return revs
 
     def get_git_info(self, rev="HEAD"):
