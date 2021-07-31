@@ -217,11 +217,13 @@ class Bencher:
 
 
     def run(self):
-        x=0
         for rev in self.get_git_revisions():
-            x += 1
-            if x%20: continue
             if rev in self.benched_revisions:
+                continue
+
+            info = self.get_git_info(rev)
+            if 'Merge remote-tracking branch' not in info['subject']:
+                self.log("Skipping non merge commit: %s" % rev)
                 continue
 
             stats = self.bench_revision(rev)
