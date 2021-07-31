@@ -93,15 +93,21 @@ class Bencher:
             w = csv.DictWriter(f, FIELDS)
             w.writerow(data)
 
-    def get_version(self, rev):
+    def get_binary(self, rev):
         dst_dir = "{}/zeek-{}".format(self.instdir, rev)
-        bro_bin = os.path.join(dst_dir, "bin/zeek" if self.is_zeek else "bin/bro")
+        for prog in "zeek", "bro":
+            path = os.path.join(dst_dir, "bin", prog)
+            if os.path.exists(path):
+                return path
+        return None
+
+    def get_version(self, rev):
+        bro_bin = self.get_binary(rev)
         return get_output([bro_bin, "--version"]).strip()
 
     def run_bro(self, rev):
-        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
         os.chdir(self.tmpdir)
-        bro_bin = os.path.join(dst_dir, "bin/zeek" if self.is_zeek else "bin/bro")
+        bro_bin = self.get_binary(rev)
         cmd = [bro_bin, "-C"]
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap])
@@ -142,8 +148,7 @@ class Bencher:
         #    subprocess.call(["perl", "-pi", "-e", 's/if/return;if/', mhr_fn])
 
     def build(self, rev):
-        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
-        if os.path.exists(dst_dir + "/bin/bro"):
+        if self.get_binary(rev):
             self.log("Already built: {}".format(rev))
             return
         os.chdir(self.srcdir)
