@@ -152,6 +152,7 @@ class Bencher:
             self.log("Already built: {}".format(rev))
             return
         os.chdir(self.srcdir)
+        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
         self.log("Building {}".format(rev))
         self.checkout(rev)
         self.is_zeek =  os.path.exists('zeek-config.in')
