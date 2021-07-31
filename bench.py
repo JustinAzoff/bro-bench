@@ -30,7 +30,7 @@ def get_output(cmd):
     retcode = process.poll()
     if retcode:
         raise ProcError(retcode, output, err)
-    return output, err
+    return output.decode(), err
 
 def get_stats(cmd):
     args = ["perf", "stat", "-o", ".timing", "-x", " ", "-e", "instructions"] + cmd
