@@ -103,7 +103,8 @@ class Bencher:
 
     def get_version(self, rev):
         bro_bin = self.get_binary(rev)
-        return get_output([bro_bin, "--version"]).strip()
+        out, err =  get_output([bro_bin, "--version"])
+        return out.strip()
 
     def run_bro(self, rev):
         os.chdir(self.tmpdir)
