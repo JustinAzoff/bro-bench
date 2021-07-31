@@ -118,7 +118,7 @@ class Bencher:
         for c in commands:
             try :
                 get_output(c.split())
-            except Exception, e:
+            except Exception as e:
                 #Nothing to do here?
                 self.log("error running " + c)
                 self.log(e.stderr)
@@ -186,7 +186,7 @@ class Bencher:
         self.log("Revision: %(rev)s %(date)s" % info)
         try :
             self.build(rev)
-        except ProcError, e:
+        except ProcError as e:
             self.log("Build failed")
             self.log(e.stderr)
             return None
@@ -243,7 +243,7 @@ class Bencher:
         try :
             value = self.bench_revision()[key]
             self.cleanup()
-        except Exception, e:
+        except Exception as e:
             self.log("Exception {}".format(e))
             self.cleanup() #FIXME: refactor this
             self.log("BISECT: SKIPPING")
