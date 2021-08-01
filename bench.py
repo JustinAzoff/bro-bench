@@ -185,7 +185,7 @@ class Bencher:
         if rev == "HEAD":
             rev = get_output("git rev-parse HEAD".split())[0].strip()
         out = get_output(["git", "rev-list", "--format=format:%ci|%s", "--max-count=1", rev])[0]
-        date, subject = out.strip().splitlines()[-1].split("|")
+        date, subject = out.strip().splitlines()[-1].split("|", 1)
         return {
             "rev": rev,
             "date": date,
