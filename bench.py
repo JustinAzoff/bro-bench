@@ -182,12 +182,13 @@ class Bencher:
         #get_output(["make", "clean"])
         subprocess.call(["rm", "-rf", "build"])
         configure_cmd = ["./configure", "--prefix=" + dst_dir, "--build-type=Release"]
+        configure_cmd.append("--generator=Ninja")
         configure_cmd.extend(filter_configure_options())
         get_output(configure_cmd)
         #eh?
         if os.path.exists("magic/README"):
             os.unlink("magic/README")
-        get_output(["make", "-j20", "install"])
+        get_output(["make", "install"])
         self.fix_trivial_issues(dst_dir)
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
