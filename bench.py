@@ -188,7 +188,7 @@ class Bencher:
         #eh?
         if os.path.exists("magic/README"):
             os.unlink("magic/README")
-        get_output(["make", "install"])
+        get_output(["ninja", "-C", "build", "install"])
         self.fix_trivial_issues(dst_dir)
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
