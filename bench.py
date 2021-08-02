@@ -109,7 +109,7 @@ class Bencher:
     def run_bro(self, rev):
         os.chdir(self.tmpdir)
         bro_bin = self.get_binary(rev)
-        cmd = [bro_bin, "-C"]
+        cmd = [bro_bin]
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap])
         cmd.extend(self.scripts)
