@@ -12,7 +12,8 @@ BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
 FIELDS = ["rev", "date", "subject", "version", "elapsed", "instructions"]
 
 os.environ['PATH']='/usr/lib/ccache/:' + os.environ['PATH']
-os.environ['CCACHE_DIR'] = '/tmp/ccache'
+os.environ['PATH']='/usr/lib64/ccache/:' + os.environ['PATH']
+os.environ['CCACHE_DIR'] = '/dev/shm/ccache'
 #echo max_size = 15.0G  >> /tmp/ccache/ccache.conf
 
 class ProcError(Exception):
@@ -51,6 +52,24 @@ def get_stats(cmd):
         "instructions": instructions,
     }
 
+DESIRED_CONFIGURE_OPTIONS=[
+    # One of these will work
+    "--disable-zeekctl",
+    "--disable-broctl",
+
+    "--ccache",
+    "--disable-python",
+    "--disable-broker-tests",
+    "--disable-archiver",
+    "--disable-btest",
+    "--disable-btest-pcaps",
+]
+
+def filter_configure_options(desired_options=DESIRED_CONFIGURE_OPTIONS):
+    with open("configure") as f:
+        configure_contents = set(f.read().split())
+
+    return [o for o in desired_options if o in configure_contents]
 
 class Bencher:
     def __init__(self, data, srcdir, tmpdir, instdir, pcaps, scripts):
@@ -162,8 +181,8 @@ class Bencher:
         s = time.time()
         #get_output(["make", "clean"])
         subprocess.call(["rm", "-rf", "build"])
-        configure_cmd = ["./configure", "--prefix=" + dst_dir, '--disable-python', "--build-type=Release"]
-        configure_cmd.append("--disable-zeekctl" if self.is_zeek else  "--disable-broctl")
+        configure_cmd = ["./configure", "--prefix=" + dst_dir, "--build-type=Release"]
+        configure_cmd.extend(filter_configure_options())
         get_output(configure_cmd)
         #eh?
         if os.path.exists("magic/README"):
