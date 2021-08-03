@@ -242,7 +242,7 @@ class Bencher:
                 continue
 
             info = self.get_git_info(rev)
-            if 'Merge remote-tracking branch' not in info['subject']:
+            if 'Merge remote-tracking branch' not in info['subject'] and 'Merge branch' not in info['subject']:
                 self.log("Skipping non merge commit: %s" % rev)
                 continue
 
