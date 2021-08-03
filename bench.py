@@ -192,7 +192,6 @@ class Bencher:
         self.fix_trivial_issues(dst_dir)
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
-        version = self.get_version(rev)
 
         self.link_version(rev)
 
