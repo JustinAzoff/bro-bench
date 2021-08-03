@@ -192,6 +192,21 @@ class Bencher:
         self.fix_trivial_issues(dst_dir)
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
+        version = self.get_version(rev)
+
+        self.link_version(rev)
+
+    def link_version(self, rev):
+        version = self.get_version(rev)
+        dst_dir = "{}/zeek-{}".format(self.instdir, rev)
+        version_base_dir = os.path.join(self.instdir, "by-version")
+        version_dir = os.path.join(version_base_dir, version)
+
+        if not os.path.isdir(version_base_dir):
+            os.makedirs(version_base_dir)
+
+        if not os.path.islink(version_dir):
+            os.symlink(dst_dir, version_dir)
 
     def get_git_revisions(self):
         os.chdir(self.srcdir)
