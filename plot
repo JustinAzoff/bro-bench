@@ -20,11 +20,11 @@ set multiplot layout 2, 1 ;
 
 set ylabel "seconds"
 set yrange [6:]
-plot "$F" using 0:4:xtic(everytenth(0)) with linespoints title "Seconds"
+plot "$F" using 0:5:xtic(everytenth(0)) with linespoints title "Seconds"
 
 set ylabel "instructions"
 set yrange [40000000000.0:]
-plot "$F" using 0:5:xtic(everytenth(0)) with linespoints title "Instructions"
+plot "$F" using 0:6:xtic(everytenth(0)) with linespoints title "Instructions"
 
 unset multiplot
 END

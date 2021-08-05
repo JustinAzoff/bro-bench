@@ -17,11 +17,11 @@ set multiplot layout 2, 1 ;
 
 set ylabel "seconds"
 set yrange [6:]
-plot "$F" using 2:4 with points title "Seconds"
+plot "$F" using 2:5 with points title "Seconds"
 
 set ylabel "instructions"
 set yrange [24000000000.0:]
-plot "$F" using 2:5 with points title "Instructions"
+plot "$F" using 2:6 with points title "Instructions"
 
 unset multiplot
 END
