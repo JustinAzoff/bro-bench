@@ -7,6 +7,9 @@ import csv
 import sys
 import shutil
 import glob
+import queue
+import threading
+import tempfile
 
 BAD_COMMITS = ["595e2f3c8a6829d44673a368ab13dd28bd4aab85"]
 FIELDS = ["rev", "date", "subject", "version", "elapsed", "instructions"]
@@ -15,6 +18,8 @@ os.environ['PATH']='/usr/lib/ccache/:' + os.environ['PATH']
 os.environ['PATH']='/usr/lib64/ccache/:' + os.environ['PATH']
 os.environ['CCACHE_DIR'] = '/dev/shm/ccache'
 #echo max_size = 15.0G  >> /tmp/ccache/ccache.conf
+
+LOGGING_MUTEX = threading.Lock()
 
 class ProcError(Exception):
     def __init__(self, retcode, out, err):
@@ -34,18 +39,19 @@ def get_output(cmd):
     return output.decode(), err.decode()
 
 def get_stats(cmd):
-    args = ["perf", "stat", "-o", ".timing", "-x", " ", "-e", "instructions"] + cmd
-    if os.path.exists(".timing"):
-        os.unlink(".timing")
+    #Not great, but should work ok
+    timing_file = tempfile.mktemp("timing")
+    args = ["perf", "stat", "-o", timing_file, "-x", " ", "-e", "instructions"] + cmd
     start = time.time()
     subprocess.check_call(args)
     end = time.time()
     elapsed = end - start
 
-    with open(".timing") as f:
+    with open(timing_file) as f:
         for line in f:
             if 'instructions' in line:
                 instructions = int(line.split()[0])
+    os.unlink(timing_file)
 
     return {
         "elapsed": elapsed,
@@ -94,8 +100,9 @@ class Bencher:
             return os.path.join(self.cwd, d)
             
     def log(self, s):
-        sys.stdout.write("%s\n" % s)
-        sys.stdout.flush()
+        with LOGGING_MUTEX:
+            sys.stdout.write("%s\n" % s)
+            sys.stdout.flush()
 
     def read_data(self):
         revs = set()
@@ -108,9 +115,10 @@ class Bencher:
         return revs
 
     def log_data_point(self, data):
-        with open(self.data, 'a') as f:
-            w = csv.DictWriter(f, FIELDS)
-            w.writerow(data)
+        with LOGGING_MUTEX:
+            with open(self.data, 'a') as f:
+                w = csv.DictWriter(f, FIELDS)
+                w.writerow(data)
 
     def get_binary(self, rev):
         dst_dir = "{}/zeek-{}".format(self.instdir, rev)
@@ -125,10 +133,13 @@ class Bencher:
         out, err =  get_output([bro_bin, "--version"])
         return out.split()[-1]
 
-    def run_bro(self, rev):
+    def run_bro(self, rev, core=None):
         os.chdir(self.tmpdir)
         bro_bin = self.get_binary(rev)
-        cmd = [bro_bin]
+        cmd = []
+        if core:
+            cmd.extend(["taskset", "-c", str(core)])
+        cmd.append(bro_bin)
         for pcap in self.pcaps:
             cmd.extend(["-r", pcap])
         cmd.extend(self.scripts)
@@ -170,6 +181,7 @@ class Bencher:
     def build(self, rev):
         if self.get_binary(rev):
             self.log("Already built: {}".format(rev))
+            self.link_version(rev)
             return
         os.chdir(self.srcdir)
         dst_dir = "{}/zeek-{}".format(self.instdir, rev)
@@ -192,6 +204,7 @@ class Bencher:
         self.fix_trivial_issues(dst_dir)
         e = time.time()
         self.log("Build took %d seconds" % (e-s))
+        version = self.get_version(rev)
 
         self.link_version(rev)
 
@@ -203,7 +216,7 @@ class Bencher:
 
         if not os.path.isdir(version_base_dir):
             os.makedirs(version_base_dir)
-
+        
         if not os.path.islink(version_dir):
             os.symlink(dst_dir, version_dir)
 
@@ -253,6 +266,7 @@ class Bencher:
     def run(self):
         for rev in self.get_git_revisions():
             if rev in self.benched_revisions:
+                self.link_version(rev)
                 continue
 
             info = self.get_git_info(rev)
@@ -316,6 +330,45 @@ class Bencher:
         self.log("Need to build this revision..")
         return self.bisect(value_threshold)
 
+
+    def multi_worker(self, queue, core):
+        while True:
+            rev = queue.get()
+            if rev is None:
+                break
+            info = self.get_git_info(rev)
+            info["version"] = ver = self.get_version(rev)
+            self.log(f"Testing... {rev} - {ver} on core {core}")
+            try :
+                stats = self.run_bro(rev, core=core)
+            except subprocess.CalledProcessError:
+                stats = dict(elapsed=0, instructions=0)
+            self.log("result: %(elapsed).2f %(instructions)d" % stats)
+            stats.update(info)
+            self.log_data_point(stats)
+
+    def multi(self, cores):
+        versions = [d.replace("zeek-","") for d in os.listdir(self.instdir)]
+        self.log(f"Testing {len(versions)} versions using {cores} cores")
+
+        q = queue.Queue()
+        threads = []
+        for cpu in range(1, cores+1):
+            t = threading.Thread(name=f"core-{cpu}", target=self.multi_worker, args=(q, cpu))
+            t.start()
+            threads.append(t)
+
+        for rev in versions:
+            try:
+                ver = self.get_version(rev)
+                q.put(rev)
+            except Exception as e:
+                self.log(f"Skipping {rev} because --version failed: {e!r}")
+        for _ in range(cores):
+            q.put(None)
+        for t in threads:
+            t.join()
+
 def main():
     parser = OptionParser()
     parser.add_option("-d", "--data", dest="data", help="data file", action="store")
@@ -326,7 +379,12 @@ def main():
     parser.add_option("-l", "--load", dest="scripts", help="scripts", action="append")
     parser.add_option("-b", "--bisect", dest="bisect", help="bisect mode, set to seconds or instructions threshold", action="store", type="int", default=0)
     parser.add_option("-f", "--fastbisect", dest="fastbisect", help="uses data file for bisecting", action="store_true", default=False)
+    parser.add_option("-m", "--multi", dest="multi", help="multi mode, run on this many cpu cores", action="store", type="int", default=0)
     (options, args) = parser.parse_args()
+
+    if options.multi:
+        b = Bencher(options.data, options.src, options.tmp, options.inst, options.pcaps, options.scripts)
+        sys.exit(b.multi(options.multi))
 
     if not (options.data and options.src and options.tmp and (options.pcaps or options.scripts)):
         parser.print_help()
@@ -338,6 +396,7 @@ def main():
 
     if options.bisect:
         sys.exit(b.bisect(options.bisect))
+
 
     b.run()
 
